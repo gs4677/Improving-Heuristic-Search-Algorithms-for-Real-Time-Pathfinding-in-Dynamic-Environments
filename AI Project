@@ -1,0 +1,82 @@
+import heapq
+
+class Node:
+    def _init_(self, position, g_cost=float('inf'), h_cost=0, parent=None):
+        self.position = position
+        self.g_cost = g_cost  # Cost from start node to current node
+        self.h_cost = h_cost  # Heuristic cost from current node to target node
+        self.parent = parent  # Parent node
+
+    def f_cost(self):
+        return self.g_cost + self.h_cost
+
+class AStar:
+    def _init_(self, grid):
+        self.grid = grid
+        self.open_set = []
+        self.closed_set = set()
+
+    def get_neighbors(self, node):
+        neighbors = []
+        x, y = node.position
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]  # Possible movements: right, left, down, up
+        for dx, dy in directions:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < len(self.grid) and 0 <= ny < len(self.grid[0]) and self.grid[nx][ny] != '#':
+                neighbors.append(Node((nx, ny)))
+        return neighbors
+
+    def heuristic_cost_estimate(self, current, goal):
+        # Manhattan distance heuristic
+        return abs(current.position[0] - goal.position[0]) + abs(current.position[1] - goal.position[1])
+
+    def reconstruct_path(self, current):
+        path = []
+        while current:
+            path.append(current.position)
+            current = current.parent
+        return path[::-1]
+
+    def astar(self, start, goal):
+        start_node = Node(start, g_cost=0, h_cost=self.heuristic_cost_estimate(Node(start), Node(goal)))
+        heapq.heappush(self.open_set, (start_node.f_cost(), id(start_node), start_node))
+
+        while self.open_set:
+            _, _, current_node = heapq.heappop(self.open_set)
+
+            if current_node.position == goal:
+                return self.reconstruct_path(current_node)
+
+            self.closed_set.add(current_node.position)
+
+            for neighbor in self.get_neighbors(current_node):
+                if neighbor.position in self.closed_set:
+                    continue
+
+                tentative_g_cost = current_node.g_cost + 1  # Assuming uniform cost for movement
+
+                if tentative_g_cost < neighbor.g_cost:
+                    neighbor.parent = current_node
+                    neighbor.g_cost = tentative_g_cost
+                    neighbor.h_cost = self.heuristic_cost_estimate(neighbor, Node(goal))
+                    heapq.heappush(self.open_set, (neighbor.f_cost(), id(neighbor), neighbor))
+
+        return None
+
+# Example usage:
+grid = [
+    ['.', '.', '.', '.', '.'],
+    ['#', '#', '.', '.', '#'],
+    ['.', '.', '.', '.', '.'],
+    ['#', '.', '#', '#', '#'],
+    ['.', '.', '.', '.', '.']
+]
+
+astar = AStar(grid)
+start = (0, 0)
+goal = (4, 4)
+path = astar.astar(start, goal)
+if path:
+    print("Shortest path:", path)
+else:
+    print("No path found.")
